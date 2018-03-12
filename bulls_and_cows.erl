@@ -13,8 +13,7 @@ play(SecretNumber, TurnCount) ->
 	UserGuess = get_users_guess(),
 	EvaluatedGuess = evaluate_guess(UserGuess, SecretNumber),
 	case is_winner(EvaluatedGuess) of
-		true ->
-			io:format("you win! well done~n");
+		true -> io:format("you win! well done~n");
 		false ->
 			print_cows_and_bulls_info(EvaluatedGuess),
 			play(SecretNumber, TurnCount + 1)
@@ -32,8 +31,22 @@ generate_secret_number(NumberList) ->
 	end.
 
 get_users_guess() ->
-	{ok, Input} = io:fread("please enter guess (four distinct numbers between 1 and 9): ", "~d~d~d~d"),
-	Input.
+	try
+		{ok, Input} = io:fread("please enter guess (four distinct numbers between 1 and 9): ", "~d~d~d~d"),
+		case all_numbers_between_one_and_nine(Input) of
+			true -> Input;
+			false ->
+				io:format("All numbers must be between 1 and 9, inclusive~nGuess again~n"),
+				get_users_guess()
+		end
+	catch
+		error:{badmatch, {error, {fread, integer}}} -> io:format("please enter only digits, you schmuck!~n"),
+		get_users_guess()
+	end.
+
+all_numbers_between_one_and_nine([]) -> true;
+all_numbers_between_one_and_nine([H|T]) when H > 0 andalso H < 10 -> all_numbers_between_one_and_nine(T);
+all_numbers_between_one_and_nine(_) -> false.
 
 print_cows_and_bulls_info([{cows, CowNumber}, {bulls, BullNumber}]) ->
 	io:format("You have ~p cows and ~p bulls~n", [CowNumber, BullNumber]).
@@ -70,14 +83,12 @@ is_winner(_) -> false.
 
 -include_lib("eunit/include/eunit.hrl").
 
-% todo add test for numbers being between 1 and 9
 generate_secret_numbers_test_() ->
 	[
 		{"the number list has 4 things in it", ?_assertEqual(4, length(generate_secret_number()))},
 		{"the number list is unique each time", generate_unique_assertion()}
-	]. %++ test_for_randomness().
+	] ++ test_for_randomness().
 
-% todo list comprehension
 test_for_randomness() -> lists:map(fun(_) -> {"randomness test", generate_unique_assertion()} end, lists:seq(1, 100)).
 
 generate_unique_assertion() ->
@@ -99,4 +110,3 @@ evaluate_winner_test_() ->
 		{"not a winner", ?_assertNot(is_winner([{cows, 2}, {bulls, 0}]))},
 		{"is a winner", ?_assert(is_winner([{cows, 0}, {bulls, 4}]))}
 	].
-
